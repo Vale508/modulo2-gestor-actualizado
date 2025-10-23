@@ -1,388 +1,391 @@
-    import React, { useEffect, useState } from "react";
-    import SideBar from "../Componentes/SideBar";
-    import Boleteria from "../Componentes/Boleteria";
-    import "../Css/Usuario.css";
+/* ======== ESTILO GENERAL ======== */
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #0a0f24, #12263a, #1c4360);
+  color: #fff;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding-top: 120px; /* separa el contenido del topbar */
+  box-sizing: border-box;
+}
 
-    function Administrador() {
-    const [eventos, setEventos] = useState([]);
-    const [localidades, setLocalidades] = useState([]);
-    const [artistas, setArtistas] = useState([]);
-    const [boletas, setBoletas] = useState([]);
-    const [editandoBoleta, setEditandoBoleta] = useState(null);
-    const [editandoEvento, setEditandoEvento] = useState(null);
-
-    const [eventoSeleccionado, setEventoSeleccionado] = useState('');
-    const [artistaSeleccionado, setArtistaSeleccionado] = useState('');
-    const [artistasPorEvento, setArtistasPorEvento] = useState([]);
-
-    const [nuevoEvento, setNuevoEvento] = useState({
-        nombre: "",
-        descripcion: "",
-        fecha_inicio: "",
-        hora_inicio: "",
-        fecha_fin: "",
-        hora_fin: "",
-    });
-
-    const [nuevoArtista, setNuevoArtista] = useState({
-        nombre: "",
-        genero_musical: "",
-        ciudad_origen: "",
-    });
-
-    const [nuevaLocalidad, setNuevaLocalidad] = useState({
-        tipo_localidad: "",
-        valor_localidad: "",
-        evento_id: "",
-        cantidad_disponible: "",
-    });
-
-    const [mostrarEvento, setMostrarEvento] = useState(false);
-    const [mostrarArtista, setMostrarArtista] = useState(false);
-    const [mostrarLocalidad, setMostrarLocalidad] = useState(false);
-
-    const cargarDatos = async () => {
-        try {
-        const resEventos = await fetch('http://localhost:5000/api/todos-eventos');
-        const dataEventos = await resEventos.json();
-        setEventos(dataEventos.data || []);
-
-        const resLocalidades = await fetch('http://localhost:5000/api/todas-localidades');
-        const dataLocalidades = await resLocalidades.json();
-        setLocalidades(dataLocalidades.data || []);
-
-        const resArtistas = await fetch('http://localhost:5000/api/todos-artistas');
-        const dataArtistas = await resArtistas.json();
-        setArtistas(dataArtistas.data || []);
-
-        const resBoletas = await fetch('http://localhost:5000/api/todas-boletas');
-        const dataBoletas = await resBoletas.json();
-        setBoletas(dataBoletas.data || []);
-        } catch (error) {
-        console.error("Error al cargar datos:", error);
-        }
-    };
-
-    useEffect(() => {
-        cargarDatos();
-    }, []);
-
-    const handleChange = (e, setState) => setState(prev => ({ ...prev, [e.target.name]: e.target.value }));
-
-    const enviarDatos = async (url, datos, cerrarModal) => {
-        try {
-        const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(datos),
-        });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) {
-            cargarDatos();
-            cerrarModal(false);
-        }
-        } catch (error) {
-        console.error("Error al enviar datos:", error);
-        alert("Error al enviar datos");
-        }
-    };
-
-    const asociarArtista = async (e) => {
-        e.preventDefault();
-        if (!eventoSeleccionado || !artistaSeleccionado) return alert("Selecciona evento y artista");
-
-        try {
-        const res = await fetch('http://localhost:5000/api/asociar-artista', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-            eventosId_Eventos: eventoSeleccionado,
-            artistasId_Artistas: artistaSeleccionado,
-            }),
-        });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) cargarArtistasPorEvento(eventoSeleccionado);
-        } catch (error) {
-        console.error(error);
-        alert("Error al asociar artista");
-        }
-    };
-
-    const cargarArtistasPorEvento = async (idEvento) => {
-        try {
-        const res = await fetch(`http://localhost:5000/api/artistas-por-evento/${idEvento}`);
-        const data = await res.json();
-        if (data.success) setArtistasPorEvento(data.data);
-        } catch (error) {
-        console.error(error);
-        }
-    };
-
-    const eliminarEvento = (id) => {
-        if (window.confirm("¿Seguro que deseas eliminar este evento?")) {
-        fetch(`http://localhost:5000/api/eliminar-evento/${id}`, { method: "DELETE" })
-            .then(res => res.json())
-            .then(data => {
-            alert(data.message);
-            if (data.success) cargarDatos();
-            });
-        }
-    };
-
-    const editarEvento = (evento) => {
-        setEditandoEvento({
-        ...evento,
-        nombre: evento.Nombre,
-        descripcion: evento.Descripcion,
-        fecha_inicio: evento.Fecha_inicio,
-        hora_inicio: evento.Hora_inicio,
-        fecha_fin: evento.Fecha_fin,
-        hora_fin: evento.Hora_fin,
-        });
-    };
-
-    const guardarCambios = async () => {
-        try {
-        const res = await fetch(`http://localhost:5000/api/editar-evento/${editandoEvento.Id_Eventos}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(editandoEvento),
-        });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) {
-            setEditandoEvento(null);
-            cargarDatos();
-        }
-        } catch (error) {
-        console.error("Error al editar evento:", error);
-        alert("Error al editar evento");
-        }
-    };
-
-    const eliminarBoleta = (id) => {
-        if (window.confirm("¿Seguro que deseas eliminar esta boleta?")) {
-        fetch(`http://localhost:5000/api/eliminar-boleta/${id}`, { method: "DELETE" })
-            .then(res => res.json())
-            .then(data => {
-            alert(data.message);
-            if (data.success) cargarDatos();
-            });
-        }
-    };
-
-    const guardarBoleta = async () => {
-        try {
-        const body = {
-            Valor: Number(editandoBoleta.Valor),
-            Cantidad: Number(editandoBoleta.Cantidad),
-            eventosId_Eventos: Number(editandoBoleta.eventosId_Eventos),
-            localidadesId_Localidades: Number(editandoBoleta.localidadesId_Localidades),
-        };
-
-        const res = await fetch(`http://localhost:5000/api/editar-boleta/${editandoBoleta.Id_Boletas}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) {
-            setEditandoBoleta(null);
-            cargarDatos();
-        }
-        } catch (error) {
-        console.error("Error al editar boleta:", error);
-        alert("Error al editar boleta");
-        }
-    };
-
-        const formatearFechaHora = (fecha) => {
-        if (!fecha) return "";
-        const fechaHora = new Date(fecha);
-        if (isNaN(fechaHora)) return "Fecha inválida";
-        return fechaHora.toLocaleString("es-CO", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        });
-    };
+/* ======== TABLAS ======== */
+.tabla-container {
+  margin: 40px 280px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+-webkit-backdrop-filter: blur(10px);
 
 
-    return (
-        <>
-        <SideBar />
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
+  padding: 20px;
+  transition: transform 0.3s ease;
+}
 
-        {/* TABLA EVENTOS */}
-        <div className="tabla-container">
-            <div className="tabla-header">
-            <h3>Eventos Registrados</h3>
-            <button className="btn-agregar" onClick={() => setMostrarEvento(true)}>➕ Agregar Evento</button>
-            </div>
-            <table className="tabla">
-            <thead>
-                <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Inicio</th>
-                <th>Fin</th>
-                <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {eventos.map((e) => ( 
-                    <tr key={e.Id_Eventos}>
-        <td>{e.Id_Eventos}</td>
-        <td>{e.Nombre}</td>
-        <td>{e.Descripcion}</td>
-        <td>{formatearFechaHora(e.Fecha_inicio)}</td>
-        <td>{formatearFechaHora(e.Fecha_fin)}</td>
-        <td>
+.tabla-container:hover {
+  transform: scale(1.02);
+}
 
+.tabla-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
 
+.tabla-header h3 {
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
 
-                    <button className="btn-primary" onClick={() => editarEvento(e)}>Editar</button>
-                    <button className="btn-secondary" onClick={() => eliminarEvento(e.Id_Eventos)}>Eliminar</button>
-                    </td>
-                </tr>
-                ))}
-            </tbody>
-            </table>
-        </div>
+.btn-agregar {
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  border: none;
+  color: #000;
+  font-weight: bold;
+  padding: 10px 18px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
 
-        {/* TABLA ARTISTAS */}
-        <div className="tabla-container">
-            <div className="tabla-header">
-            <h3>Artistas Registrados</h3>
-            <button className="btn-agregar" onClick={() => setMostrarArtista(true)}>➕ Agregar Artista</button>
-            </div>
-            <table className="tabla">
-            <thead>
-                <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Género Musical</th>
-                <th>Ciudad</th>
-                </tr>
-            </thead>
-            <tbody>
-                {artistas.map((a) => (
-                <tr key={a.Id_Artistas}>
-                    <td>{a.Id_Artistas}</td>
-                    <td>{a.Nombre}</td>
-                    <td>{a.Genero_musical}</td>
-                    <td>{a.Ciudad_origen}</td>
-                </tr>
-                ))}
-            </tbody>
-            </table>
-        </div>
+.btn-agregar:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.9);
+}
 
-        {/* TABLA LOCALIDADES */}
-        <div className="tabla-container">
-            <div className="tabla-header">
-            <h3>Localidades Registradas</h3>
-            <button className="btn-agregar" onClick={() => setMostrarLocalidad(true)}>➕ Agregar Localidad</button>
-            </div>
-            <table className="tabla">
-            <thead>
-                <tr>
-                <th>ID</th>
-                <th>Tipo</th>
-                <th>Valor</th>
-                <th>Evento</th>
-                </tr>
-            </thead>
-            <tbody>
-                {localidades.map((l) => (
-                <tr key={l.Id_Localidades}>
-                    <td>{l.Id_Localidades}</td>
-                    <td>{l.Tipo_localidad}</td>
-                    <td>{l.Valor_localidad}</td>
-                    <td>{l.eventosId_Eventos}</td>
-                </tr>
-                ))}
-            </tbody>
-            </table>
-        </div>
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+  text-align: center;
+}
 
-        {/* TABLA BOLETAS */}
-        <Boleteria
-            boletas={boletas}
-            setEditandoBoleta={setEditandoBoleta}
-            eliminarBoleta={eliminarBoleta}
-        />
+.tabla th {
+  background: rgba(0, 255, 255, 0.2);
+  color: #00ffea;
+  padding: 12px;
+  border-bottom: 2px solid #00ffea;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
 
-        {/* FORMULARIO ASOCIAR ARTISTAS */}
-        <div className="tabla-container">
-            <h3>Asociar Artista a Evento</h3>
-            <form onSubmit={asociarArtista} className="form-asociar">
-            <select value={eventoSeleccionado} onChange={e => { setEventoSeleccionado(e.target.value); cargarArtistasPorEvento(e.target.value); }} required>
-                <option value="">Seleccionar Evento</option>
-                {eventos.map(e => <option key={e.Id_Eventos} value={e.Id_Eventos}>{e.Nombre}</option>)}
-            </select>
+.tabla td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
 
-            <select value={artistaSeleccionado} onChange={e => setArtistaSeleccionado(e.target.value)} required>
-                <option value="">Seleccionar Artista</option>
-                {artistas.map(a => <option key={a.Id_Artistas} value={a.Id_Artistas}>{a.Nombre}</option>)}
-            </select>
+.tabla tr:hover {
+  background: rgba(0, 255, 255, 0.1);
+  transition: 0.3s ease;
+}
 
-            <button type="submit" className="btn-primary">Asociar</button>
-            </form>
+/* ======== MODAL ======== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 20, 40, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  backdrop-filter: blur(10px);
+-webkit-backdrop-filter: blur(10px);
 
-            {eventoSeleccionado && artistasPorEvento.length > 0 && (
-            <ul>
-                {artistasPorEvento.map(a => <li key={a.Id_Artistas}>{a.Nombre}</li>)}
-            </ul>
-            )}
-        </div>
+}
 
-        {/* MODAL EDITAR EVENTO */}
-        {editandoEvento && (
-            <div className="modal-overlay">
-            <div className="modal">
-                <h3>Editar Evento #{editandoEvento.Id_Eventos}</h3>
-                <form onSubmit={e => { e.preventDefault(); guardarCambios(); }}>
-                <input name="nombre" value={editandoEvento.nombre} onChange={e => handleChange(e, setEditandoEvento)} placeholder="Nombre" />
-                <input name="descripcion" value={editandoEvento.descripcion} onChange={e => handleChange(e, setEditandoEvento)} placeholder="Descripción" />
-                <input type="date" name="fecha_inicio" value={editandoEvento.fecha_inicio} onChange={e => handleChange(e, setEditandoEvento)} />
-                <input type="time" name="hora_inicio" value={editandoEvento.hora_inicio} onChange={e => handleChange(e, setEditandoEvento)} />
-                <input type="date" name="fecha_fin" value={editandoEvento.fecha_fin} onChange={e => handleChange(e, setEditandoEvento)} />
-                <input type="time" name="hora_fin" value={editandoEvento.hora_fin} onChange={e => handleChange(e, setEditandoEvento)} />
-                <div className="modal-buttons">
-                    <button type="submit" className="btn-primary">Guardar</button>
-                    <button type="button" className="btn-secondary" onClick={() => setEditandoEvento(null)}>Cancelar</button>
-                </div>
-                </form>
-            </div>
-            </div>
-        )}
+.modal {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 40px;
+  width: 420px;
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
+  text-align: center;
+  animation: popUp 0.5s ease;
+}
 
-        {/* MODAL EDITAR BOLETA */}
-        {editandoBoleta && (
-            <div className="modal-overlay">
-            <div className="modal">
-                <h3>Editar Boleta #{editandoBoleta.Id_Boletas}</h3>
-                <form onSubmit={e => { e.preventDefault(); guardarBoleta(); }}>
-                <input type="number" name="Valor" value={editandoBoleta.Valor} onChange={e => setEditandoBoleta({ ...editandoBoleta, Valor: e.target.value })} placeholder="Valor" />
-                <input type="number" name="Cantidad" value={editandoBoleta.Cantidad} onChange={e => setEditandoBoleta({ ...editandoBoleta, Cantidad: e.target.value })} placeholder="Cantidad" />
-                <input type="number" name="eventosId_Eventos" value={editandoBoleta.eventosId_Eventos} onChange={e => setEditandoBoleta({ ...editandoBoleta, eventosId_Eventos: e.target.value })} placeholder="ID Evento" />
-                <input type="number" name="localidadesId_Localidades" value={editandoBoleta.localidadesId_Localidades} onChange={e => setEditandoBoleta({ ...editandoBoleta, localidadesId_Localidades: e.target.value })} placeholder="ID Localidad" />
-                <div className="modal-buttons">
-                    <button type="submit" className="btn-primary">Guardar</button>
-                    <button type="button" className="btn-secondary" onClick={() => setEditandoBoleta(null)}>Cancelar</button>
-                </div>
-                </form>
-            </div>
-            </div>
-        )}
-        </>
-    );
-    }
+@keyframes popUp {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
 
-    export default Administrador;
+.modal h3 {
+  font-size: 1.8rem;
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 20px;
+}
+
+.modal input,
+.modal select {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3);
+  transition: 0.3s ease;
+}
+
+.modal input:focus,
+.modal select:focus {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+  transform: scale(1.02);
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  border: none;
+  color: #000;
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  margin: 0 5px;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
+  transform: translateY(-3px);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 2px solid #00ffea;
+  color: #00ffea;
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  margin: 0 5px;
+}
+
+.btn-secondary:hover {
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+/* ======== SELECT PERSONALIZADO ======== */
+.modal select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255, 255, 255, 0.15)
+    url("data:image/svg+xml;utf8,<svg fill='cyan' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")
+    no-repeat right 12px center;
+  background-size: 14px;
+  padding-right: 35px;
+  cursor: pointer;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+/* Opciones del select */
+.modal select option {
+  background: #0a0f24;
+  color: #00ffea;
+  font-weight: 500;
+}
+
+/* Al pasar el mouse */
+.modal select:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+  transform: scale(1.03);
+}
+
+/* ======== SCROLL ======== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00eaff, #00ff88);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+/* ======== BOLETERÍA ======== */
+.boleteria-container {
+  margin: 40px 280px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
+  padding: 20px;
+  transition: transform 0.3s ease;
+}
+
+.boleteria-container:hover {
+  transform: scale(1.02);
+}
+
+.boleteria-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.boleteria-header h3 {
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.boleteria-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+  text-align: center;
+}
+
+.boleteria-table th {
+  background: rgba(0, 255, 255, 0.2);
+  color: #00ffea;
+  padding: 12px;
+  border-bottom: 2px solid #00ffea;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+.boleteria-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.boleteria-table tr:hover {
+  background: rgba(0, 255, 255, 0.1);
+  transition: 0.3s ease;
+}
+
+.boleteria-table button {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0 2px;
+  transition: all 0.3s ease;
+}
+
+.boleteria-table .btn-editar {
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  color: #000;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+.boleteria-table .btn-editar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+}
+
+.boleteria-table .btn-eliminar {
+  background: transparent;
+  border: 2px solid #00ffea;
+  color: #00ffea;
+}
+
+.boleteria-table .btn-eliminar:hover {
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+/* ======== FORMULARIO ASOCIAR ARTISTAS ======== */
+.form-asociar {
+  margin: 40px 280px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
+}
+
+.form-asociar h3 {
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+}
+
+.form-asociar select,
+.form-asociar input {
+  width: 48%;
+  padding: 12px;
+  margin: 5px 1%;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3);
+  transition: 0.3s ease;
+}
+
+.form-asociar select:focus,
+.form-asociar input:focus {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+  transform: scale(1.02);
+}
+
+.form-asociar button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(90deg, #00eaff, #00ff88);
+  color: #000;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+.form-asociar button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
+}
